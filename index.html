@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> Real-Time - 3-User Expense Calculator for Knot&Neo</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-12">
+
+  <!-- Header Section -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-500 text-white p-2.5 rounded-xl text-xl font-bold flex items-center justify-center shadow-lg">
+          <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight">Real-Time Expense Tracking</h1>
+            <span id="sync-status" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live Syncing
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Shared Cloud Ledger across 3 Users</p>
+        </div>
+      </div>
+      
+      <!-- Actions Header -->
+      <div class="flex items-center space-x-3">
+        <button id="reset-all-btn" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-100 border border-red-500/30 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">
+          <i class="fa-solid fa-trash-arrow-up"></i>
+          <span>Clear Ledger</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Add/Edit Form & User Selector (5 cols) -->
+    <section class="lg:col-span-5 space-y-6">
+      
+      <!-- Active User Profile Switcher -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          1. Select Current Active Profile
+        </label>
+        <div class="grid grid-cols-3 gap-2" id="user-selector-container">
+          <!-- User 1 Button -->
+          <button type="button" data-user="User 1" class="user-select-btn border-2 border-indigo-500 bg-indigo-50 text-indigo-700 p-3 rounded-xl flex flex-col items-center justify-center transition-all shadow-sm">
+            <span class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-bold mb-1 shadow-sm">U1</span>
+            <span class="text-xs font-semibold">User 1</span>
+          </button>
+          <!-- User 2 Button -->
+          <button type="button" data-user="User 2" class="user-select-btn border-2 border-slate-200 bg-white hover:border-emerald-300 text-slate-600 p-3 rounded-xl flex flex-col items-center justify-center transition-all">
+            <span class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold mb-1 shadow-sm">U2</span>
+            <span class="text-xs font-semibold">User 2</span>
+          </button>
+          <!-- User 3 Button -->
+          <button type="button" data-user="User 3" class="user-select-btn border-2 border-slate-200 bg-white hover:border-orange-300 text-slate-600 p-3 rounded-xl flex flex-col items-center justify-center transition-all">
+            <span class="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold mb-1 shadow-sm">U3</span>
+            <span class="text-xs font-semibold">User 3</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Add/Edit Expense Form -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2" id="form-title">
+            <i class="fa-solid fa-plus-circle text-indigo-500"></i>
+            Add Shared Expense
+          </h2>
+          <span id="editing-badge" class="hidden text-xs bg-amber-100 text-amber-800 font-medium px-2.5 py-0.5 rounded-full">
+            Editing Mode
+          </span>
+        </div>
+
+        <form id="expense-form" class="space-y-4">
+          <input type="hidden" id="expense-id" value="" />
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Description / Title</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <i class="fa-solid fa-file-invoice"></i>
+              </span>
+              <input type="text" id="expense-desc" required placeholder="e.g. Dinner, Rent, WiFi Bill" 
+                class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Amount (₹)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold">
+                ₹
+              </span>
+              <input type="number" step="0.01" min="0.01" id="expense-amount" required placeholder="0.00" 
+                class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Paid By</label>
+            <select id="expense-payer" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white transition-all">
+              <option value="User 1">User 1</option>
+              <option value="User 2">User 2</option>
+              <option value="User 3">User 3</option>
+            </select>
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button type="submit" id="submit-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span id="btn-text">Save Expense to Cloud</span>
+            </button>
+            <button type="button" id="cancel-edit-btn" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 px-4 rounded-xl text-sm transition-all">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Instant Calculation trigger -->
+      <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg shadow-indigo-100 flex flex-col justify-between">
+        <div>
+          <span class="text-xs uppercase tracking-wider text-indigo-200 font-semibold block mb-1">Equal 3-Way Split</span>
+          <h3 class="text-lg font-bold">1-Click Settlement Plan</h3>
+          <p class="text-xs text-indigo-100/80 mt-1">Recalculates net balances & minimal transfer vectors in real-time across all 3 users.</p>
+        </div>
+        <button id="calculate-now-btn" class="mt-4 w-full bg-white hover:bg-indigo-50 text-indigo-900 font-bold py-3 px-4 rounded-xl shadow transition-all flex items-center justify-center gap-2 group">
+          <i class="fa-solid fa-bolt text-amber-500 group-hover:scale-110 transition-transform"></i>
+          <span>Recalculate & Sync Split</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Results Dashboard & History Ledger (7 cols) -->
+    <section class="lg:col-span-7 space-y-6">
+
+      <!-- Overall Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <!-- Total Spent -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-400 uppercase">Total Group Spend</p>
+          <p class="text-xl font-extrabold text-slate-800 mt-1" id="stat-total">₹0.00</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">Sum of all entries</p>
+        </div>
+        <!-- Per Person Share -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-400 uppercase">Share / Person</p>
+          <p class="text-xl font-extrabold text-indigo-600 mt-1" id="stat-fair-share">₹0.00</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">Total ÷ 3</p>
+        </div>
+        <!-- Total Entries Count -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+          <p class="text-xs font-semibold text-slate-400 uppercase">Transactions</p>
+          <p class="text-xl font-extrabold text-slate-800 mt-1" id="stat-count">0</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">Cloud synced items</p>
+        </div>
+      </div>
+
+      <!-- Split Breakdown & Settlement Matrix -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+          <span>Individual User Balances</span>
+          <span class="text-xs font-normal text-slate-400">(Fair Share = <span id="fair-share-pill">₹0.00</span>)</span>
+        </h3>
+
+        <!-- User Balance Matrix Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5" id="user-balance-cards">
+          <!-- Dynamic Balance Cards -->
+        </div>
+
+        <!-- Who Owes Whom Direct Settlement Box -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-arrows-split-up-and-left text-indigo-500"></i>
+            Suggested Settlement (1-Click Minimal Payments)
+          </h4>
+          <div id="settlements-container" class="space-y-2">
+            <!-- Dynamic Settlements -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction History Table -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-500"></i>
+            Live Shared Expense Ledger
+          </h3>
+          <span class="text-xs text-slate-400 font-medium" id="history-count-badge">0 items</span>
+        </div>
+
+        <div class="overflow-x-auto max-h-80 overflow-y-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-100/70 text-[11px] uppercase font-semibold text-slate-500 sticky top-0">
+              <tr>
+                <th class="py-2.5 px-4">Payer</th>
+                <th class="py-2.5 px-4">Description</th>
+                <th class="py-2.5 px-4 text-right">Amount</th>
+                <th class="py-2.5 px-4 text-center">Date</th>
+                <th class="py-2.5 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="expense-table-body" class="divide-y divide-slate-100 text-xs">
+              <!-- Expense Rows -->
+            </tbody>
+          </table>
+          
+          <!-- Empty State -->
+          <div id="empty-state" class="p-8 text-center hidden">
+            <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2 text-slate-400">
+              <i class="fa-solid fa-cloud text-lg"></i>
+            </div>
+            <p class="text-xs text-slate-500 font-medium">No expenses logged in cloud database yet.</p>
+            <p class="text-[11px] text-slate-400 mt-1">Add a transaction to sync live across all 3 users.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 transform transition-all scale-95 opacity-0" id="modal-box">
+      <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-3">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-800" id="modal-title">Clear Cloud Ledger?</h3>
+      <p class="text-xs text-slate-500 mt-1" id="modal-msg">This will permanently delete all shared expenses from the database for all 3 users.</p>
+      <div class="mt-5 flex gap-2 justify-end">
+        <button id="modal-cancel-btn" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+        <button id="modal-confirm-btn" class="px-3.5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow transition-all">Yes, Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Scripts & Application Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      addDoc, 
+      setDoc, 
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Application Variables
+    let app, db, auth;
+    let currentUser = 'User 1';
+    let expenses = [];
+    let editingId = null;
+
+    // Standard fallback environment variables
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'shared-calculator-3user';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+      ? JSON.parse(__firebase_config) 
+      : {
+          apiKey: "demo-api-key",
+          authDomain: "demo-app.firebaseapp.com",
+          projectId: "demo-app",
+          storageBucket: "demo-app.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:demo"
+        };
+
+    // DOM Elements
+    const syncStatus = document.getElementById('sync-status');
+    const expenseForm = document.getElementById('expense-form');
+    const expenseIdInput = document.getElementById('expense-id');
+    const expenseDescInput = document.getElementById('expense-desc');
+    const expenseAmountInput = document.getElementById('expense-amount');
+    const expensePayerSelect = document.getElementById('expense-payer');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const formTitle = document.getElementById('form-title');
+    const editingBadge = document.getElementById('editing-badge');
+    const userSelectorBtns = document.querySelectorAll('.user-select-btn');
+    
+    const statTotal = document.getElementById('stat-total');
+    const statFairShare = document.getElementById('stat-fair-share');
+    const fairSharePill = document.getElementById('fair-share-pill');
+    const statCount = document.getElementById('stat-count');
+    const historyBadge = document.getElementById('history-count-badge');
+    const tableBody = document.getElementById('expense-table-body');
+    const emptyState = document.getElementById('empty-state');
+    const userBalanceCards = document.getElementById('user-balance-cards');
+    const settlementsContainer = document.getElementById('settlements-container');
+    const calculateNowBtn = document.getElementById('calculate-now-btn');
+    const resetAllBtn = document.getElementById('reset-all-btn');
+
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const modalBox = document.getElementById('modal-box');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+    // Initialize Firebase Realtime Connection
+    async function initFirebase() {
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // Authenticate before query initialization
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        setupRealtimeListener();
+      } catch (err) {
+        console.warn("Cloud connection error, falling back to session storage mode:", err);
+        syncStatus.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        syncStatus.innerHTML = `<i class="fa-solid fa-wifi text-amber-400"></i> Local Fallback Mode`;
+        loadLocalFallback();
+      }
+    }
+
+    // Set up Realtime Firestore Sync
+    function setupRealtimeListener() {
+      // Mandatory path for public collaborative data
+      const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
+
+      onSnapshot(colRef, (snapshot) => {
+        expenses = [];
+        snapshot.forEach((doc) => {
+          expenses.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Sort by timestamp descending
+        expenses.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        renderApp();
+      }, (error) => {
+        console.error("Realtime listener error:", error);
+      });
+    }
+
+    // Local Storage Fallback if Firebase unavailable
+    function loadLocalFallback() {
+      const stored = localStorage.getItem('trisplit_expenses_backup');
+      if (stored) {
+        expenses = JSON.parse(stored);
+        renderApp();
+      }
+    }
+
+    function saveLocalFallback() {
+      localStorage.setItem('trisplit_expenses_backup', JSON.stringify(expenses));
+    }
+
+    // User Selector Setup
+    userSelectorBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selected = btn.getAttribute('data-user');
+        setActiveUser(selected);
+      });
+    });
+
+    function setActiveUser(user) {
+      currentUser = user;
+      expensePayerSelect.value = user;
+
+      userSelectorBtns.forEach(btn => {
+        const btnUser = btn.getAttribute('data-user');
+        if (btnUser === user) {
+          btn.className = `user-select-btn border-2 p-3 rounded-xl flex flex-col items-center justify-center transition-all ${getUserThemeClass(user, 'active')}`;
+        } else {
+          btn.className = `user-select-btn border-2 border-slate-200 bg-white text-slate-600 p-3 rounded-xl flex flex-col items-center justify-center transition-all ${getUserThemeClass(btnUser, 'hover')}`;
+        }
+      });
+    }
+
+    function getUserThemeClass(user, mode) {
+      if (user === 'User 1') return mode === 'active' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm' : 'hover:border-indigo-300';
+      if (user === 'User 2') return mode === 'active' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm' : 'hover:border-emerald-300';
+      if (user === 'User 3') return mode === 'active' ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm' : 'hover:border-orange-300';
+    }
+
+    function getUserBadgeHtml(user) {
+      let colorClasses = "bg-indigo-100 text-indigo-800 border-indigo-200";
+      if (user === 'User 2') colorClasses = "bg-emerald-100 text-emerald-800 border-emerald-200";
+      if (user === 'User 3') colorClasses = "bg-orange-100 text-orange-800 border-orange-200";
+
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${colorClasses}">${user}</span>`;
+    }
+
+    // Form Handling (Add/Edit)
+    expenseForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const desc = expenseDescInput.value.trim();
+      const amount = parseFloat(expenseAmountInput.value);
+      const payer = expensePayerSelect.value;
+
+      if (!desc || isNaN(amount) || amount <= 0) return;
+
+      const payload = {
+        description: desc,
+        amount: amount,
+        payer: payer,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        if (editingId) {
+          if (db) {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'expenses', editingId);
+            await updateDoc(docRef, payload);
+          } else {
+            const idx = expenses.findIndex(x => x.id === editingId);
+            if (idx !== -1) expenses[idx] = { id: editingId, ...payload };
+            saveLocalFallback();
+            renderApp();
+          }
+          resetFormState();
+        } else {
+          if (db) {
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
+            await addDoc(colRef, payload);
+          } else {
+            expenses.unshift({ id: 'exp_' + Date.now(), ...payload });
+            saveLocalFallback();
+            renderApp();
+          }
+        }
+        expenseDescInput.value = '';
+        expenseAmountInput.value = '';
+      } catch (error) {
+        console.error("Save error:", error);
+      }
+    });
+
+    window.editExpense = function(id) {
+      const target = expenses.find(exp => exp.id === id);
+      if (!target) return;
+
+      editingId = id;
+      expenseIdInput.value = target.id;
+      expenseDescInput.value = target.description;
+      expenseAmountInput.value = target.amount;
+      expensePayerSelect.value = target.payer;
+
+      setActiveUser(target.payer);
+
+      formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-500"></i> Edit Shared Expense`;
+      btnText.innerText = "Update Cloud Record";
+      submitBtn.className = "flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2";
+      editingBadge.classList.remove('hidden');
+      cancelEditBtn.classList.remove('hidden');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    cancelEditBtn.addEventListener('click', resetFormState);
+
+    function resetFormState() {
+      editingId = null;
+      expenseIdInput.value = '';
+      expenseForm.reset();
+      expensePayerSelect.value = currentUser;
+
+      formTitle.innerHTML = `<i class="fa-solid fa-plus-circle text-indigo-500"></i> Add Shared Expense`;
+      btnText.innerText = "Save Expense to Cloud";
+      submitBtn.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2";
+      editingBadge.classList.add('hidden');
+      cancelEditBtn.classList.add('hidden');
+    }
+
+    window.deleteExpense = async function(id) {
+      try {
+        if (db) {
+          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'expenses', id);
+          await deleteDoc(docRef);
+        } else {
+          expenses = expenses.filter(exp => exp.id !== id);
+          saveLocalFallback();
+          renderApp();
+        }
+        if (editingId === id) resetFormState();
+      } catch (err) {
+        console.error("Delete error:", err);
+      }
+    };
+
+    // Render & Split Calculations
+    function renderApp() {
+      const users = ['User 1', 'User 2', 'User 3'];
+      
+      const totalSpent = expenses.reduce((sum, item) => sum + Number(item.amount), 0);
+      const fairShare = totalSpent / 3;
+
+      const paidByUser = { 'User 1': 0, 'User 2': 0, 'User 3': 0 };
+      expenses.forEach(exp => {
+        if (paidByUser[exp.payer] !== undefined) {
+          paidByUser[exp.payer] += Number(exp.amount);
+        }
+      });
+
+      statTotal.innerText = `₹${totalSpent.toFixed(2)}`;
+      statFairShare.innerText = `₹${fairShare.toFixed(2)}`;
+      fairSharePill.innerText = `₹${fairShare.toFixed(2)}`;
+      statCount.innerText = expenses.length;
+      historyBadge.innerText = `${expenses.length} item${expenses.length !== 1 ? 's' : ''}`;
+
+      // User Balance Matrix Cards
+      userBalanceCards.innerHTML = users.map(u => {
+        const paid = paidByUser[u];
+        const netBalance = paid - fairShare;
+        const isOwed = netBalance >= 0;
+
+        let statusColor = isOwed ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-rose-600 bg-rose-50 border-rose-200';
+        let statusIcon = isOwed ? 'fa-arrow-down-left' : 'fa-arrow-up-right';
+        let statusText = isOwed ? `Gets back ₹${netBalance.toFixed(2)}` : `Owes ₹${Math.abs(netBalance).toFixed(2)}`;
+
+        return `
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-slate-700">${u}</span>
+                ${getUserBadgeHtml(u)}
+              </div>
+              <p class="text-[11px] text-slate-400">Total Paid: <span class="font-semibold text-slate-700">₹${paid.toFixed(2)}</span></p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-slate-200/60">
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border ${statusColor}">
+                <i class="fa-solid ${statusIcon}"></i>
+                ${statusText}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderSettlementPlan(paidByUser, fairShare);
+      renderTable();
+    }
+
+    // Minimal Payment Settlement Logic
+    function renderSettlementPlan(paidByUser, fairShare) {
+      const users = ['User 1', 'User 2', 'User 3'];
+      
+      let debtors = [];
+      let creditors = [];
+
+      users.forEach(u => {
+        const net = paidByUser[u] - fairShare;
+        const roundedNet = Math.round(net * 100) / 100;
+        if (roundedNet < -0.01) {
+          debtors.push({ name: u, amount: Math.abs(roundedNet) });
+        } else if (roundedNet > 0.01) {
+          creditors.push({ name: u, amount: roundedNet });
+        }
+      });
+
+      let transactions = [];
+      let dIdx = 0;
+      let cIdx = 0;
+
+      while (dIdx < debtors.length && cIdx < creditors.length) {
+        let debtor = debtors[dIdx];
+        let creditor = creditors[cIdx];
+
+        let payment = Math.min(debtor.amount, creditor.amount);
+        transactions.push({
+          from: debtor.name,
+          to: creditor.name,
+          amount: payment
+        });
+
+        debtor.amount -= payment;
+        creditor.amount -= payment;
+
+        if (debtor.amount < 0.01) dIdx++;
+        if (creditor.amount < 0.01) cIdx++;
+      }
+
+      if (transactions.length === 0) {
+        settlementsContainer.innerHTML = `
+          <div class="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 font-medium">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+            <span>Everyone is fully settled up! No transactions needed.</span>
+          </div>
+        `;
+      } else {
+        settlementsContainer.innerHTML = transactions.map(t => `
+          <div class="flex items-center justify-between text-xs bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-700">${t.from}</span>
+              <i class="fa-solid fa-right-long text-slate-400 text-xs"></i>
+              <span class="font-bold text-slate-700">${t.to}</span>
+            </div>
+            <span class="font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">
+              ₹${t.amount.toFixed(2)}
+            </span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Render Table History
+    function renderTable() {
+      if (expenses.length === 0) {
+        tableBody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      tableBody.innerHTML = expenses.map(exp => {
+        const dateObj = new Date(exp.timestamp);
+        const formattedDate = dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+        const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-3 px-4">${getUserBadgeHtml(exp.payer)}</td>
+            <td class="py-3 px-4 font-medium text-slate-800">${escapeHtml(exp.description)}</td>
+            <td class="py-3 px-4 text-right font-bold text-slate-900">₹${Number(exp.amount).toFixed(2)}</td>
+            <td class="py-3 px-4 text-center text-slate-400 text-[11px]">
+              <div>${formattedDate}</div>
+              <div class="text-[10px] text-slate-300">${formattedTime}</div>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center space-x-1">
+                <button onclick="editExpense('${exp.id}')" title="Edit Entry" class="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteExpense('${exp.id}')" title="Delete Entry" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    calculateNowBtn.addEventListener('click', () => {
+      renderApp();
+      calculateNowBtn.classList.add('scale-95');
+      setTimeout(() => calculateNowBtn.classList.remove('scale-95'), 150);
+    });
+
+    // Confirmation Modal Setup
+    resetAllBtn.addEventListener('click', () => openModal());
+
+    function openModal() {
+      modalBackdrop.classList.remove('hidden');
+      setTimeout(() => {
+        modalBox.classList.remove('scale-95', 'opacity-0');
+        modalBox.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeModal() {
+      modalBox.classList.remove('scale-100', 'opacity-100');
+      modalBox.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modalBackdrop.classList.add('hidden');
+      }, 150);
+    }
+
+    modalCancelBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+
+    modalConfirmBtn.addEventListener('click', async () => {
+      try {
+        if (db) {
+          for (let exp of expenses) {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'expenses', exp.id);
+            await deleteDoc(docRef);
+          }
+        } else {
+          expenses = [];
+          saveLocalFallback();
+          renderApp();
+        }
+        resetFormState();
+        closeModal();
+      } catch (err) {
+        console.error("Clear error:", err);
+      }
+    });
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[m];
+      });
+    }
+
+    // Startup Initialization
+    window.addEventListener('DOMContentLoaded', initFirebase);
+  </script>
+</body>
+</html>
