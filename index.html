@@ -287,16 +287,16 @@
 
     // Standard fallback environment variables
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'shared-calculator-3user';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' 
-      ? JSON.parse(__firebase_config) 
-      : {
-          apiKey: "demo-api-key",
-          authDomain: "demo-app.firebaseapp.com",
-          projectId: "demo-app",
-          storageBucket: "demo-app.appspot.com",
-          messagingSenderId: "123456789",
-          appId: "1:123456789:web:demo"
-        };
+   // Your actual Firebase project configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDsGAiqiBdIRva_sSY8FTwcMIQgqiH0KLs",
+      authDomain: "expense-of-knotneo.firebaseapp.com",
+      projectId: "expense-of-knotneo",
+      storageBucket: "expense-of-knotneo.firebasestorage.app",
+      messagingSenderId: "304671179173",
+      appId: "1:304671179173:web:55d91a7bdedd48e053e84c",
+      measurementId: "G-3HQ47LTJS8"
+    };
 
     // DOM Elements
     const syncStatus = document.getElementById('sync-status');
